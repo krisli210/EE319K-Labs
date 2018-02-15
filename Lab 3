@@ -43,9 +43,9 @@ GPIO_PORTF_CR_R    EQU 0x40025524
 GPIO_LOCK_KEY      EQU 0x4C4F434B  ; Unlocks the GPIO_CR register
 SYSCTL_RCGCGPIO_R  EQU 0x400FE608
 	
-Value EQU 500000		;this is 20% duty cycle
-Half EQU 62500
-MAX EQU 2500000			;this is 100% duty cycle
+Value EQU 600000		;this is 20% duty cycle
+Half EQU 75000
+MAX EQU 3000000			;this is 100% duty cycle
 						;this is correct for the debugger (possibly not for the machine)
      IMPORT  TExaS_Init
      THUMB
@@ -152,11 +152,11 @@ BS
  UDIV R5,R8,R1
  MUL R5,R4
 ok
- LDR R4, = 20
+ LDR R4, = 10
  UDIV R1,R4
  UDIV R8,R4
  BL Occilate
- LDR R4, = 20
+ LDR R4, = 10
  MUL R1,R4
  MUL R8,R4
  SUBS R5,#1
@@ -175,11 +175,11 @@ DESCEND
  UDIV R5,R8,R1
  MUL R5,R4
 bazzok
- LDR R4, = 20
+ LDR R4, = 10
  UDIV R1,R4
  UDIV R8,R4
  BL Occilate
- LDR R4, = 20
+ LDR R4, = 10
  MUL R1,R4
  MUL R8,R4
  LDR R6,[R2]
