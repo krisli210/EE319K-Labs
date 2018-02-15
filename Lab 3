@@ -161,14 +161,14 @@ ok
  MUL R8,R4
  SUBS R5,#1
  BNE ok
- LDR R5,[R2]				;i need the real contents of R2
- AND R4,R5,#0x10	;to check if it should continue to go through the breathing loop
+ LDR R6,[R2]				;i need the real contents of R2
+ AND R4,R6,#0x10	;to check if it should continue to go through the breathing loop
  CMP R4,#0
  BEQ breath
  MOV R1,R9
      B    loop
 DESCEND
- CMP R1,R10
+ CMP R1,R9
  BEQ breath
  SUB R1,R10
  LDR R4, = 10
@@ -182,11 +182,17 @@ bazzok
  LDR R4, = 20
  MUL R1,R4
  MUL R8,R4
+ LDR R6,[R2]
+ AND R4,R6,#0x10	;to check if it should continue to go through the breathing loop
+ CMP R4,#0
+ BNE fin
  SUBS R5,#1
  BNE bazzok
- AND R4,R5,#0x10	;to check if it should continue to go through the breathing loop
+ LDR R6,[R2]
+ AND R4,R6,#0x10	;to check if it should continue to go through the breathing loop
  CMP R4,#0
  BEQ DESCEND
+fin
  MOV R1,R9
      B    loop
 	 
