@@ -7,7 +7,7 @@
 NVIC_ST_CTRL_R        EQU 0xE000E010
 NVIC_ST_RELOAD_R      EQU 0xE000E014
 NVIC_ST_CURRENT_R     EQU 0xE000E018
-TEN_TO_THE_SIXTH 	  EQU #1000000
+TEN_TO_THE_SEVENTH 	  EQU #10000000
 
         AREA    |.text|, CODE, READONLY, ALIGN=2
         THUMB
@@ -36,9 +36,9 @@ SysTick_Init
 ;cleared the enable of stop
 	ldr R0,=NVIC_ST_RELOAD_R;
 			;timer decreases every 12.5 nanos seconds =>(80 MHz bus clock) 
-			;frequency for program is 80Hz///80Hz*(10^6) = 80MHz
+			;frequency for program is 8Hz///8Hz*(10^7) = 80MHz
 			;reload value will be about 10^6 
-	LDR R1,=TEN_TO_THE_SIXTH;
+	LDR R1,=TEN_TO_THE_SEVENTH;
 	STR R1,[R0];
 	STR R1,[R0];
 ;set specific reload time
