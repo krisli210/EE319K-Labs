@@ -22,9 +22,6 @@
 		;**//**// doesnt mean same initalization
 			
 ; You will only verify the variable duty-cycle feature of Lab 3 and not the "breathing" feature. 
-		;breating feature was a a different duty cycle
-		;therefore the checkng mechanism only needs to check 8Hz
-		
 ;**** Instrumentation data to be gathered is as follows:
 ; After Button(PE1) press collect one state and time entry. 
 	; we can keep the original code
