@@ -7,12 +7,12 @@
 ;   Repeat the functionality from Lab3 but now we want you to 
 ;   insert debugging instruments which gather data (state and timing)
 ;   to verify that the system is functioning as expected.
-; Hardware connections (External: One button and one LED)
+;Hardware connections (External: One button and one LED)
 ;  PE1 is Button input  (1 means pressed, 0 means not pressed)
 ;  PE0 is LED output (1 activates external LED on protoboard)
 ;  PF2 is Blue LED on Launchpad used as a heartbeat
-		;*******same idea aas lab 3 but we need to change the hardware slightly****** 
-			;lab 3:
+		;*******same idea as lab 3 but we need to change the hardware slightly****** 
+			;lab 3
 			 ;Hardware connections (External: One button and one LED)
 				;  PE1 is Button input  (1 means pressed, 0 means not pressed)
 				;  PE0 is LED output (1 activates external LED on protoboard)
@@ -41,6 +41,10 @@
 ; On each iteration of the main loop of your program toggle the 
 ; LED to indicate that your code(system) is live (not stuck or dead).
 
+NVIC_ST_CTRL_R        EQU 0xE000E010
+NVIC_ST_RELOAD_R      EQU 0xE000E014
+NVIC_ST_CURRENT_R     EQU 0xE000E018
+
 GPIO_PORTE_DATA_R  EQU 0x400243FC
 GPIO_PORTE_DIR_R   EQU 0x40024400
 GPIO_PORTE_AFSEL_R EQU 0x40024420
@@ -52,17 +56,25 @@ GPIO_PORTF_AFSEL_R EQU 0x40025420
 GPIO_PORTF_PUR_R   EQU 0x40025510
 GPIO_PORTF_DEN_R   EQU 0x4002551C
 SYSCTL_RCGCGPIO_R  EQU 0x400FE608
+;////////////////////////////////////////////////////
+WOW EQU 0xFFFFFFFF
 Value EQU 500000		;this is 20% duty cycle
 MAX EQU 2500000			;this is 100% duty cycle
+		;we'll have to change theses 
+;/////////////////////////////////////////////////////
 
 ; RAM Area
            AREA    DATA, ALIGN=2
+;///////////////////////////////////////////////////
+DATABUFFER SPACE 200 ; change to 50, but change the pointer by a factor of 4 to match 
+TIMEBUFFER SPACE 50
+;//////////////////////////////////////////////////
 ;-UUU-Declare  and allocate space for your Buffers 
 ;    and any variables (like pointers and counters) here
 
 ; ROM Area
        IMPORT  TExaS_Init
-       IMPORT SysTick Init
+       IMPORT SysTick_Init
 ;-UUU-Import routine(s) from other assembly files (like SysTick.s) here
        AREA    |.text|, CODE, READONLY, ALIGN=2
        THUMB
@@ -81,15 +93,16 @@ Start
  NOP;
  NOP;
  NOP;
- B INIT_PORTE
- B INIT_PORTF
+ BL INIT_PORTE
+ BL INIT_PORTF
+ 
+ CPSIE  I    ; TExaS voltmeter, scope runs on interrupts
+ ;BL SysTick_Init  
  LDR R0, = GPIO_PORTE_DATA_R
  LDR R2, = GPIO_PORTF_DATA_R
  LDR R8, = MAX 
  LDR R9, = Value; value is the incremention, and also the starting point, 1/5 of max duty cycle
  MOV R1,R9 ;R1 starts at initial value
-      CPSIE  I    ; TExaS voltmeter, scope runs on interrupts
-	  B SysTick_Init  
 loop  
 							;///////R1 is input to occilate delay 
 							;///////R2 (PORTF) and R0 (PORTE) hold data registers
@@ -103,6 +116,7 @@ loop
  STR R3,[R0]				;it'll insignificant if the button is slightly pressed
 Hold
  LDR R3,[R0]			 	;load a renewed PORTE data register
+ BL Occilate
  ANDS R4,R3,#0x2			;check bit 1, the button
  BNE Hold					;if 1, then it'll contiune the loop an have no light output
  CMP R8,R1					;compare count to max
@@ -119,27 +133,42 @@ OOF
 
 Occilate				
 ;input R1
-;AAPCS doesnt matter
+ PUSH {R6,R5,R4,LR}
  EOR R3,#0x1				; toggle the light, friendly
  STR R3,[R0]				; store R3 into Data register
  MOV R4,R1				;R4 = R1, the count; change R1 in code to change the duty cycle
  ADD R4,#1				;//////there will likely be the same error as in delay2, but when duty cycle is 0%
- 
+ LDR R5,[R2]
+ ORR R5,#4
+ STR R5,[R2]		;turn on PF2
+ MOV R6,#0
 Delay
- SUBS R4,#1			;R1 is the counter
+ CMP R6,R9			;same number of cycles if you take QWER or not (9 cycles)
+ BNE QWER
+ BIC R5,#4			;turn off PF2
+ STR R5,[R2]
+QWER
+ ADD R6,#1
+ SUBS R4,#1			;R1 is the delay counter
  BNE Delay  		;PE1 will adjust the value of R1
- 
  EOR R3,#0x1				; toggle the light, friendly
  STR R3,[R0]				; store R3 into Data register
  SUB R4,R8,R1		;R4 = difference of R8, and R1 (the rest of the duty cycle)
  ADD R4,#1 			;///instead of doing the comparison for bug, add 1 to R4 each time. might change the stuff by a nanosecond but its simple
- 
-Delay2																
+Delay2	
+ CMP R6,R9			 
+ BNE ASDF			 
+ BIC R5,#4			;turn off PF2 again (this is for 0% duty cycle because R6 wont decrement enough in the first loop to trigger the clear)
+ STR R5,[R2]
+ASDF
+ ADD R6,#1
  SUBS R4,#1			;R1 is the counter
  BNE Delay2 		
- BX LR
+ BIC R5,#4
+ STR R5,[R2]
+ POP {R6,R5,R4,PC}
  
- INIT_PORTE		;same as lab 3 
+INIT_PORTE		;same as lab 3 
  LDR R0, = GPIO_PORTE_DIR_R;  port e PE0 equals an output(1) and PE1 equals an input(0)
  LDR R1,[R0];
  ORR R1,#0x1;
@@ -151,13 +180,31 @@ Delay2
  STR R1,[R0];
  BX LR
  
- INIT_PORTF		;PF2 is blue LED and OUTPUT
+INIT_PORTF		;PF2 is blue LED and OUTPUT
  LDR R0, = GPIO_PORTF_DIR_R;  port f PF4 as input (0)
  MOV R1,#4;
  STR R1,[R0];
  LDR R0, = GPIO_PORTF_DEN_R ; enable PF4
  STR R1,[R0]
  BX LR
+ 
+DEBUG_INIT		; create arrays for holding data, both contain same length so the index will be the same
+ PUSH {R0,R1,R2,R3}
+ LDR R2,=WOW       ;WOW = hex -1
+ LDR R0,=DATABUFFER
+ LDR R1,=TIMEBUFFER
+ MOV R3,#0
+LOOPP
+ STR R2,[R0,R3]
+ STR R2,[R1,R3]
+ ADD R3,#4
+ CMP R3,#200
+ BNE LOOPP
+ ;BL SysTick_Init ;?
+ MOV R7, #0 			;R7 will now be the index for the arrays 
+ POP {R0,R1,R2,R3}
+ BX LR 
+				
+STOP 
       ALIGN      ; make sure the end of this section is aligned
       END        ; end of file
-
