@@ -87,7 +87,7 @@ Start
  ; TExaS_Init sets bus clock at 80 MHz
       BL  TExaS_Init ; voltmeter, scope on PD3
  ;place your initializations here
-  LDR R0, = SYSCTL_RCGCGPIO_R;	i need port e and f
+ LDR R0, = SYSCTL_RCGCGPIO_R;	i need port e and f
  LDR R1,[R0];
  ORR R1,#0x30;
  STR R1,[R0];
@@ -98,12 +98,14 @@ Start
  BL INIT_PORTE
  BL INIT_PORTF
  
- CPSIE  I    ; TExaS voltmeter, scope runs on interrupts
- ;BL SysTick_Init  
- LDR R0, = GPIO_PORTE_DATA_R
+ CPSIE  I    ; TExaS voltmeter, scope runs on interrupts  
+ 
  LDR R2, = GPIO_PORTF_DATA_R
  LDR R8, = MAX 
  LDR R9, = Value; value is the incremention, and also the starting point, 1/5 of max duty cycle
+ BL DEBUG_INIT
+ BL SysTick_Init
+ LDR R0, = GPIO_PORTE_DATA_R
  MOV R1,R9 ;R1 starts at initial value
 loop  
 							;///////R1 is input to occilate delay 
@@ -116,11 +118,14 @@ loop
  BEQ OOF					; if zero (button not pressed) continue
  BIC R3,#0x1				; not then turn the light off
  STR R3,[R0]				;it'll insignificant if the button is slightly pressed
+ BL DEBUG_CAPTURE			;capture after the button is pressed
 Hold
  LDR R3,[R0]			 	;load a renewed PORTE data register
  BL Occilate
  ANDS R4,R3,#0x2			;check bit 1, the button
- BNE Hold					;if 1, then it'll contiune the loop an have no light output
+ BNE Hold					;if 1, then it'll contiune the loop
+ BL DEBUG_CAPTURE			;capture after its released
+ MOV R11,#6
  CMP R8,R1					;compare count to max
  BNE Nope 					;if max is greater than R1, skip these next lines
  AND R1,#0					;reset R1 (will this actually make the duty cycle 0?)
@@ -137,6 +142,7 @@ Occilate
 ;input R1
  PUSH {R6,R5,R4,LR}
  EOR R3,#0x1				; toggle the light, friendly
+ BL DEBUG_CAPTURE
  STR R3,[R0]				; store R3 into Data register
  MOV R4,R1				;R4 = R1, the count; change R1 in code to change the duty cycle
  ADD R4,#1				;//////there will likely be the same error as in delay2, but when duty cycle is 0%
@@ -154,6 +160,7 @@ QWER
  SUBS R4,#1			;R1 is the delay counter
  BNE Delay  		;PE1 will adjust the value of R1
  EOR R3,#0x1				; toggle the light, friendly
+ BL DEBUG_CAPTURE
  STR R3,[R0]				; store R3 into Data register
  SUB R4,R8,R1		;R4 = difference of R8, and R1 (the rest of the duty cycle)
  ADD R4,#1 			;///instead of doing the comparison for bug, add 1 to R4 each time. might change the stuff by a nanosecond but its simple
@@ -196,13 +203,17 @@ DEBUG_INIT		; create arrays for holding data, both contain same length so the in
  LDR R0,=DATABUFFER
  LDR R1,=TIMEBUFFER
  MOV R3,#0
-LOOPP
- STR R2,[R0,R3]
+LOOPP				;zero time storage
  STR R2,[R1,R3]
  ADD R3,#4
  CMP R3,#200
  BNE LOOPP
- ;BL SysTick_Init ;?
+ MOV R3,#0
+LOOPPP				;zero data storage
+ STRB R2,[R0,R3]
+ ADD R3,#1
+ CMP R3,#50
+ BNE LOOPPP
  MOV R7, #0 			;R7 will now be the index for the arrays 
  POP {R0,R1,R2,R3}
  BX LR 
