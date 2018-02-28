@@ -112,8 +112,7 @@ loop
 							;///////R2 (PORTF) and R0 (PORTE) hold data registers
 							;///////R3 is to change data in ports/change the light 
 							;///////R9 hold comparison or constants for addition values 
- LDR R3,[R0]				
- ;LDR R4,[R2]////AND R4,#0x10//CMP R4,#0//BEQ breathstart	
+ LDR R3,[R0]					
  ANDS R4,R3,#0x2			;checks PE1 value for 1 in bit 1
  BEQ OOF					; if zero (button not pressed) continue
  BIC R3,#0x1				; not then turn the light off
@@ -124,7 +123,6 @@ Hold
  BL Occilate
  ANDS R4,R3,#0x2			;check bit 1, the button
  BNE Hold					;if 1, then it'll contiune the loop
- BL DEBUG_CAPTURE			;capture after its released
  MOV R11,#6
  CMP R8,R1					;compare count to max
  BNE Nope 					;if max is greater than R1, skip these next lines
@@ -224,14 +222,14 @@ DEBUG_CAPTURE ; Go back and figure out if it should be STRB and stuff like that
  LDR R5, [R4]
  CMP R5, #50 ; see if NEntries variable has reached 50 yet, we'll use NEntries for a pointer too
  BEQ CapEnd
- LDR R0, = DATABUFFER
- LDR R1, = TIMEBUFFER
+ LDR R0, = DATABUFFER		;
+ LDR R1, = TIMEBUFFER		;
  LDR R2, = NVIC_ST_CURRENT_R
- LDR R3, = GPIO_PORTE_DATA_R ; 
-Cap
+ LDR R3, = GPIO_PORTE_DATA_R 	;R2 already equalled PORTE data///we can change come of this  
+Cap				;what is this lable?
  LDR R4, [R3] ; get PORTE data
  BL MaskShift ; turns into packed data 
- STR R4, [R0, R5] ; Store the packed data into DATABUFFER plus pointer
+ STRB R4, [R0, R5] ; Store the packed data into DATABUFFER plus pointer
  LDR R4, [R2] ; reading time
  LSL R6, R5, 0x2 ; R5 is pointer for time: R5 = R3 * 4
  STR R4, [R1, R6] ; store the data from TIME location to TIMEBUFFER plus pointer*4
