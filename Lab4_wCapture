@@ -60,7 +60,7 @@ SYSCTL_RCGCGPIO_R  EQU 0x400FE608
 WOW EQU 0xFFFFFFFF
 Value EQU 500000		;this is 20% duty cycle
 MAX EQU 2500000			;this is 100% duty cycle
-		;we'll have to change theses 
+		;we'll have to change theseb
 ;/////////////////////////////////////////////////////
 
 ; RAM Area
@@ -69,7 +69,7 @@ MAX EQU 2500000			;this is 100% duty cycle
 DATABUFFER SPACE 50 ; change to 50, but change the pointer by a factor of 4 to match 
 TIMEBUFFER SPACE 200 ; 
 NEntries SPACE 1 ; Variable for counting amount of entires in array 
-PTR Space 1 ; Variable for pointer	
+PTR Space 4 ; Variable for pointer	
 ;//////////////////////////////////////////////////
 ;-UUU-Declare  and allocate space for your Buffers 
 ;    and any variables (like pointers and counters) here
@@ -207,32 +207,29 @@ LOOPP
  POP {R0,R1,R2,R3}
  BX LR 
 
-DEBUG_CAPTURE ; 
+DEBUG_CAPTURE ; Go back and figure out if it should be STRB and stuff like that
  PUSH {R0-R8,LR} ; 
+ LDR R4, = NEntries 
+ LDR R5, [R4]
+ CMP R5, #50 ; see if NEntries variable has reached 50 yet, we'll use NEntries for a pointer too
+ BEQ CapEnd
  LDR R0, = DATABUFFER
  LDR R1, = TIMEBUFFER
  LDR R2, = NVIC_ST_CURRENT_R
  LDR R3, = GPIO_PORTE_DATA_R ; 
- LDR R4, = NEntries 
- LDR R5, [R4]
- CMP R5, #50 ; see if NEntries variable has reached 50 yet
- BEQ CapEnd
- ADD R5, R5, 0x1 ; add 1 if not
- STR R5, [R4]
 Cap
- LDR R4, [R3] ; reading and storing data first
+ LDR R4, [R3] ; get PORTE data
  BL MaskShift ; turns into packed data 
- LDR R3, =PTR
- LDR R3, [R3] ; Load the pointer into R3
- STRB R4, [R0, R3] ; Store the packed data into DATABUFFER plus pointer
+ STR R4, [R0, R5] ; Store the packed data into DATABUFFER plus pointer
  LDR R4, [R2] ; reading time
- LSL R5, R3, 0x2 ; R5 is pointer for time: R5 = R3 * 4
- STR R4, [R2, R5] ; store the data from TIME location to TIMEBUFFER plus pointer
- ADD R3, R3, 0x1 ; Increment pointer
- LDR R4, =PTR
- STR R3, [R4] ; store pointer back into variable
+ LSL R6, R5, 0x2 ; R5 is pointer for time: R5 = R3 * 4
+ STR R4, [R1, R6] ; store the data from TIME location to TIMEBUFFER plus pointer*4
+ ADD R5, R5, 0x1 ; Increment pointer
+ LDR R4, =NEntries
+ STR R5, [R4] ; store pointer back into variable
+CapEnd 
  POP {R0-R8, LR}
-CapEnd BX LR
+ BX LR
  
 MaskShift ;for masking and shifting the PortE data so that bit 1 is in bit 4 position: R4 is input with data, R4 is output with packed data
  PUSH {R5, R6}
