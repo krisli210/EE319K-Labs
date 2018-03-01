@@ -60,14 +60,16 @@ SYSCTL_RCGCGPIO_R  EQU 0x400FE608
 WOW EQU 0xFFFFFFFF
 Value EQU 500000		;this is 20% duty cycle
 MAX EQU 2500000			;this is 100% duty cycle
-		;we'll have to change theses 
+		;we'll have to change theseb
 ;/////////////////////////////////////////////////////
 
 ; RAM Area
            AREA    DATA, ALIGN=2
 ;///////////////////////////////////////////////////
-DATABUFFER SPACE 200 ; change to 50, but change the pointer by a factor of 4 to match 
-TIMEBUFFER SPACE 50
+DATABUFFER SPACE 50 ; change to 50, but change the pointer by a factor of 4 to match 
+TIMEBUFFER SPACE 200 ; 
+NEntries SPACE 1 ; Variable for counting amount of entires in array 
+PTR SPACE 4 ; Variable for pointer	
 ;//////////////////////////////////////////////////
 ;-UUU-Declare  and allocate space for your Buffers 
 ;    and any variables (like pointers and counters) here
@@ -85,7 +87,7 @@ Start
  ; TExaS_Init sets bus clock at 80 MHz
       BL  TExaS_Init ; voltmeter, scope on PD3
  ;place your initializations here
-  LDR R0, = SYSCTL_RCGCGPIO_R;	i need port e and f
+ LDR R0, = SYSCTL_RCGCGPIO_R;	i need port e and f
  LDR R1,[R0];
  ORR R1,#0x30;
  STR R1,[R0];
@@ -110,19 +112,18 @@ loop
 							;///////R2 (PORTF) and R0 (PORTE) hold data registers
 							;///////R3 is to change data in ports/change the light 
 							;///////R9 hold comparison or constants for addition values 
- LDR R3,[R0]				
- ;LDR R4,[R2]////AND R4,#0x10//CMP R4,#0//BEQ breathstart	
+ LDR R3,[R0]					
  ANDS R4,R3,#0x2			;checks PE1 value for 1 in bit 1
  BEQ OOF					; if zero (button not pressed) continue
  BIC R3,#0x1				; not then turn the light off
  STR R3,[R0]				;it'll insignificant if the button is slightly pressed
+ MOV R11,#1
  BL DEBUG_CAPTURE			;capture after the button is pressed
 Hold
  LDR R3,[R0]			 	;load a renewed PORTE data register
  BL Occilate
  ANDS R4,R3,#0x2			;check bit 1, the button
  BNE Hold					;if 1, then it'll contiune the loop
- BL DEBUG_CAPTURE			;capture after its released
  MOV R11,#6
  CMP R8,R1					;compare count to max
  BNE Nope 					;if max is greater than R1, skip these next lines
@@ -215,7 +216,48 @@ LOOPPP				;zero data storage
  MOV R7, #0 			;R7 will now be the index for the arrays 
  POP {R0,R1,R2,R3}
  BX LR 
-				
+
+DEBUG_CAPTURE ; Go back and figure out if it should be STRB and stuff like that
+ CMP R11,#0
+ BEQ HALT
+ PUSH {R0-R8,LR} ; 
+ LDR R4, = NEntries 
+ LDR R5, [R4]
+ CMP R5, #50 ; see if NEntries variable has reached 50 yet, we'll use NEntries for a pointer too
+ BEQ CapEnd
+ LDR R2, = DATABUFFER		
+ LDR R1, = TIMEBUFFER		
+ LDR R3, = NVIC_ST_CURRENT_R
+ ;LDR R3, = GPIO_PORTE_DATA_R 	;R0 already equalled PORTE data///we can change come of this  
+;Cap				;what is this lable?
+ LDR R4, [R0] ; get PORTE data
+ BL MaskShift ; turns into packed data 
+ STRB R4, [R2, R5]	; Store the packed data into DATABUFFER plus pointer
+ LDR R4, [R3] ; reading time
+ LSL R6, R5,#0x2 ; R5 is pointer for time: R5 = R3 * 4  (MUL?
+ STR R4, [R1, R6] ; store the data from TIME location to TIMEBUFFER plus pointer*4
+ ADD R5, R5,#0x1 ; Increment pointer
+ LDR R4, =NEntries
+ STR R5, [R4] ; store pointer back into variable
+CapEnd 
+ POP {R0-R8, LR}
+ SUB R11,#1
+HALT
+ BX LR
+ 
+MaskShift ;for masking and shifting the PortE data so that bit 1 is in bit 4 position: R4 is input with data, R4 is output with packed data
+ PUSH {R5, R6}
+ BIC R4,#0xFFFFFFFC ; clear all bits but 1 and 0
+ MOV R5, R4
+ BIC R5,#0x2 ; clear bit 1
+ BIC R4,#0x1 ; clear bit 0
+ LSL R4,#0x3 ; move bit 1 to bit 4 position
+ ORR R4, R4, R5 ; Combine registers
+ POP {R5, R6}
+ BX LR
+ 
+ 
 STOP 
       ALIGN      ; make sure the end of this section is aligned
       END        ; end of file
+
