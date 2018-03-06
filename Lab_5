@@ -1,0 +1,170 @@
+// TableTrafficLight.c edX lab 10, EE319K Lab 5
+// Runs on LM4F120 or TM4C123
+// Index implementation of a Moore finite state machine to operate a traffic light.  
+// Daniel Valvano, Jonathan Valvano
+// Feb 27, 2017
+
+/* 
+ Copyright 2018 by Jonathan W. Valvano, valvano@mail.utexas.edu
+    You may use, edit, run or distribute this file
+    as long as the above copyright notice remains
+ THIS SOFTWARE IS PROVIDED "AS IS".  NO WARRANTIES, WHETHER EXPRESS, IMPLIED
+ OR STATUTORY, INCLUDING, BUT NOT LIMITED TO, IMPLIED WARRANTIES OF
+ MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE APPLY TO THIS SOFTWARE.
+ VALVANO SHALL NOT, IN ANY CIRCUMSTANCES, BE LIABLE FOR SPECIAL, INCIDENTAL,
+ OR CONSEQUENTIAL DAMAGES, FOR ANY REASON WHATSOEVER.
+ For more information about my classes, my research, and my books, see
+ http://users.ece.utexas.edu/~valvano/
+ */
+
+// See TExaS.h for other possible hardware connections that can be simulated
+// east/west red light connected to PE5
+// east/west yellow light connected to PE4
+// east/west green light connected to PE3
+// north/south facing red light connected to PE2
+// north/south facing yellow light connected to PE1
+// north/south facing green light connected to PE0
+// pedestrian detector connected to PA4 (1=pedestrian present)
+// north/south car detector connected to PA3 (1=car present)
+// east/west car detector connected to PA2 (1=car present)
+// "walk" light connected to PF3,2,1 (built-in white LED)
+// "don't walk" light connected to PF1 (built-in red LED)
+#include <stdint.h>
+#include "tm4c123gh6pm.h"
+#include "SysTick.h"
+#include "TExaS.h" 
+
+// Declare your FSM linked structure here
+struct State{
+	uint32_t out;
+	uint32_t time;
+	const struct State *Next[8]; //idk how many 
+};
+//difficult too consider holding the button as an input 
+//create CHECKHOLD
+//checks for 2 second hold without systick*** 
+//to be done during any loop/while
+//changes the next state to one of the states that goes directly
+//to walk, depending on the other input
+typedef const struct State STyp;
+#define GS1 &FSM[0]
+#define GS2 &FSM[1]
+#define GS3 &FSM[2]
+#define	GW1 &FSM[3]
+#define GW2 &FSM[4]
+#define GW3 &FSM[5]
+#define WLK &FSM[6]
+#define YS &FSM[7]
+#define YW &FSM[8]
+#define SIND &FSM[9]
+#define WIND &FSM[10]
+#define WKIND &FSM[11]
+#define F1 &FSM[12] 	//red and turn off the other lights
+#define F2 &FSM[13] 	//off
+#define F3 &FSM[14] 	//red
+#define F4 &FSM[15] 	//off
+#define F5 &FSM[16] 	//red wont need to turn it off
+//transition should go naturally from south to west to walk to south
+//if all buttons are held down
+ STyp FSM[19] ={
+{0x61,1500,{GS2,GS2,GS2,GS2,GS2,GS2,GS2,GS2}},
+{0x61,1500,{GS3,GS3,GS3,GS3,GS3,GS3,GS3,GS3}},
+{0x61,1500,{SIND,YS,SIND,YS,YS,YS,YS,YS}},
+{0x4C,1500,{GW2,GW2,GW2,GW2,GW2,GW2,GW2,GW2}},
+{0x4C,1500,{GW3,GW3,GW3,GW3,GW3,GW3,GW3,GW3}},
+{0x4C,1500,{WIND,WIND,YW,YW,YW,YW,YW,YW}},
+{0xA4,6000,{WKIND,F1,F1,F1,WKIND,F1,F1,F1}},
+{0x62,1500,{GW1,GW1,GW1,GW1,GW1,WLK,WLK,GW1}},
+{0x54,1500,{WLK,WLK,GS1,GS1,WLK,WLK,WLK,WLK}},
+{0x61,1,{SIND,YS,SIND,YS,YS,YS,YS,YS}},
+{0x4C,1,{WIND,WIND,YW,YW,YW,YW,YW,YW}},
+{0xA4,1,{WKIND,F1,F1,F1,WKIND,F1,F1,F1}},
+{0x64,500,{F2,F2,F2,F2,F2,F2,F2,F2}},
+{0x24,500,{F3,F3,F3,F3,F3,F3,F3,F3}},
+{0x64,500,{F4,F4,F4,F4,F4,F4,F4,F4}},
+{0x24,500,{F5,F5,F5,F5,F5,F5,F5,F5}},
+{0x64,500,{GS1,GW1,GS1,GS1,GS1,GW1,GS1,GS1}},
+};
+//make each stage at most 2 seconds long?
+		//except walk because its isnt checking for inputs regularly
+//Allows for 2 second hold
+
+
+void EnableInterrupts(void);
+	int PA4;
+	int PA3;
+	int PA2;	// shift them to the right so that they are uniform
+	int input;
+	int w = 16;  // walking bit
+	int x;
+	int y;	
+	int z;	
+	int pt; //defined as state pointer 
+	int a;
+	int b;
+	int c;
+	int LL;
+	int OO;
+	int WW;
+int main(void){ 
+	STyp *pt;
+	pt = &FSM[6]; // state pointer
+  TExaS_Init(SW_PIN_PA432, LED_PIN_PE543210); // activate traffic simulation and set system clock to 80 MHz
+  SysTick_Init();     
+  // Initialize ports and FSM you write this as part of Lab 5
+	SYSCTL_RCGCGPIO_R |= 0x31;
+	SYSCTL_RCGC2_R |= 0x31;
+	SysTick_Wait10ms(10);
+	GPIO_PORTA_DIR_R &= 0xE1;	//forgot how to bit clear
+	GPIO_PORTA_DEN_R |= 0x1C;
+	
+	GPIO_PORTE_DIR_R |= 0x3F;
+	GPIO_PORTE_DEN_R |= 0x3F;
+	
+	GPIO_PORTF_DIR_R |= 0xE;
+	GPIO_PORTF_DEN_R |= 0xE; 
+  EnableInterrupts(); // TExaS uses interrupts
+	
+  while(1){
+	//take output based on state
+	//express it
+		
+		a = pt->out;
+	//for external LED
+		GPIO_PORTE_DATA_R = (a&0x3F); //i only need the first 6 bits 
+	//for internal LED	
+		b = ((a&0x80)>>4|((a&0x80)>>5)|((a&0x80)>>6));  //final bit is white light
+		c = ((a&0x40)>>5);
+		b = b|c;		// OR the bits
+		GPIO_PORTF_DATA_R &= 0x0; //forgot how to bit clear
+		GPIO_PORTF_DATA_R |= b; 
+		
+	//wait
+		SysTick_Wait10ms(pt->time);
+//find input
+		z = (GPIO_PORTA_DATA_R&0x10); 
+																	//checks walking bit in PA4 
+																	//value 0 or 16
+		x = ((((pt->out)&0x20)>>1)&(((pt->out)&0x4)<<2));	
+																				//checks our current output to see if we should reset PA4
+																				// x = bit 5 and 2 of PORTE data shifted to bit 4 and AND'd
+																				//if x = 16, we are in walking state and can bic clear PA4
+		y = (~x)&16;
+																				//y = inverse of x, so (x,y)=>(16,0)or(0,16)
+		w = (z|w)&y;																					//if z = 16 ok, we have an input
+																													//if y = 16 and z or w = 16, w = 16, as 
+																													//if y = 0, then x = 16 and we had to reset 
+//we need the PA4 to reset only if the walk state has been reached
+//but only set if walk input has reached 
+//reset will only occur if both the output is 001001
+		PA4 = w>>2; 
+    PA3 = ((GPIO_PORTA_DATA_R&0x8)>>2);
+		PA2 = ((GPIO_PORTA_DATA_R&0x4)>>2);
+		input = PA4 | PA3 | PA2;
+		pt = pt->Next[input]; 
+//determined inputs in form of bits 0,1,2
+//now we need to set the output
+  }
+}
+
+
