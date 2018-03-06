@@ -1,0 +1,49 @@
+// SysTick.c
+// Implements two busy-wait based delay routines
+#include <stdint.h>
+// Initialize SysTick with busy wait running at bus clock.
+#define NVIC_ST_CTRL_R      (*((volatile unsigned long *)0xE000E010))
+#define NVIC_ST_RELOAD_R    (*((volatile unsigned long *)0xE000E014))
+#define NVIC_ST_CURRENT_R   (*((volatile unsigned long *)0xE000E018))
+
+//;------------SysTick_Init------------
+//; ;-UUU-Complete this subroutine
+//; Initialize SysTick running at bus clock.
+//; Make it so NVIC_ST_CURRENT_R can be used as a 24-bit time
+//; Input: none
+//; Output: none
+//; Modifies: Systick memory values to initialize them for use in the program
+//	;Step1: Clear ENABLE to stop counter
+//	;Step2: Specify the RELOAD value
+//	;Step3: Clear the counter via NVIC_ST_CURRENT_R
+//	;Step4: Set NVIC_ST_CTRL_R
+//		;CLK_SRC = 1 (bus clock is the only option)
+//		;INTEN = 0 for no interrupts
+//		;ENABLE = 1 to enable
+//;taken from the Slides by Bard, Erez, Gerstlauer, Valvano, Yerraballi, Telang, Janapa Reddi, Tiwari
+
+void SysTick_Init(void){
+NVIC_ST_CTRL_R = 0; 
+// no interrupts?
+NVIC_ST_CTRL_R =1+4; 
+}
+
+// The delay parameter is in units of the 80 MHz core clock. (12.5 ns)
+// each "delay" = 12.5 nanoseconds 
+void SysTick_Wait(uint32_t delay){
+		NVIC_ST_RELOAD_R = delay-1 ;
+    NVIC_ST_CURRENT_R = 0;
+	while((NVIC_ST_CTRL_R&0x00010000)==0){
+		//wait for flag?
+	};
+}
+
+// Time delay using busy wait.
+// waits for count*10ms
+// 10000us equals 10ms
+void SysTick_Wait10ms(uint32_t delay){
+	int x;
+	for(x=0;x<delay;x++){		
+		SysTick_Wait(80000); //wait 10ms @ 80 MHz
+	}
+}
