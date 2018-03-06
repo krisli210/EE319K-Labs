@@ -67,23 +67,23 @@ typedef const struct State STyp;
 //transition should go naturally from south to west to walk to south
 //if all buttons are held down
  STyp FSM[19] ={
-{0x61,1500,{GS2,GS2,GS2,GS2,GS2,GS2,GS2,GS2}},
-{0x61,1500,{GS3,GS3,GS3,GS3,GS3,GS3,GS3,GS3}},
-{0x61,1500,{SIND,YS,SIND,YS,YS,YS,YS,YS}},
-{0x4C,1500,{GW2,GW2,GW2,GW2,GW2,GW2,GW2,GW2}},
-{0x4C,1500,{GW3,GW3,GW3,GW3,GW3,GW3,GW3,GW3}},
-{0x4C,1500,{WIND,WIND,YW,YW,YW,YW,YW,YW}},
-{0xA4,6000,{WKIND,F1,F1,F1,WKIND,F1,F1,F1}},
-{0x62,1500,{GW1,GW1,GW1,GW1,GW1,WLK,WLK,GW1}},
-{0x54,1500,{WLK,WLK,GS1,GS1,WLK,WLK,WLK,WLK}},
+{0x61,150,{GS2,GS2,GS2,GS2,GS2,GS2,GS2,GS2}},
+{0x61,150,{GS3,GS3,GS3,GS3,GS3,GS3,GS3,GS3}},
+{0x61,150,{SIND,YS,SIND,YS,YS,YS,YS,YS}},
+{0x4C,150,{GW2,GW2,GW2,GW2,GW2,GW2,GW2,GW2}},
+{0x4C,150,{GW3,GW3,GW3,GW3,GW3,GW3,GW3,GW3}},
+{0x4C,150,{WIND,WIND,YW,YW,YW,YW,YW,YW}},
+{0xA4,600,{WKIND,F1,F1,F1,WKIND,F1,F1,F1}},
+{0x62,150,{GW1,GW1,GW1,GW1,GW1,WLK,WLK,GW1}},
+{0x54,150,{WLK,WLK,GS1,GS1,WLK,WLK,WLK,WLK}},
 {0x61,1,{SIND,YS,SIND,YS,YS,YS,YS,YS}},
 {0x4C,1,{WIND,WIND,YW,YW,YW,YW,YW,YW}},
 {0xA4,1,{WKIND,F1,F1,F1,WKIND,F1,F1,F1}},
-{0x64,500,{F2,F2,F2,F2,F2,F2,F2,F2}},
-{0x24,500,{F3,F3,F3,F3,F3,F3,F3,F3}},
-{0x64,500,{F4,F4,F4,F4,F4,F4,F4,F4}},
-{0x24,500,{F5,F5,F5,F5,F5,F5,F5,F5}},
-{0x64,500,{GS1,GW1,GS1,GS1,GS1,GW1,GS1,GS1}},
+{0x64,100,{F2,F2,F2,F2,F2,F2,F2,F2}},
+{0x24,100,{F3,F3,F3,F3,F3,F3,F3,F3}},
+{0x64,100,{F4,F4,F4,F4,F4,F4,F4,F4}},
+{0x24,100,{F5,F5,F5,F5,F5,F5,F5,F5}},
+{0x64,100,{GS1,GW1,GS1,GS1,GS1,GW1,GS1,GS1}},
 };
 //make each stage at most 2 seconds long?
 		//except walk because its isnt checking for inputs regularly
@@ -108,6 +108,7 @@ void EnableInterrupts(void);
 	int WW;
 int main(void){ 
 	STyp *pt;
+
 	pt = &FSM[6]; // state pointer
   TExaS_Init(SW_PIN_PA432, LED_PIN_PE543210); // activate traffic simulation and set system clock to 80 MHz
   SysTick_Init();     
@@ -166,5 +167,3 @@ int main(void){
 //now we need to set the output
   }
 }
-
-
